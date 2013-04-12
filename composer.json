@@ -1,0 +1,10 @@
+{
+    "require": {
+        "jet/console": "v0.1"
+    },
+    "autoload": {
+        "psr-0": {
+            "Pharify": "src/"
+        }
+    }
+}

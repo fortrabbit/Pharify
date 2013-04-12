@@ -1,0 +1,56 @@
+#!/usr/bin/env php
+<?php
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$pharFile = __DIR__ . '/../pharify.phar';
+$phar     = new \Phar($pharFile, 0, 'pharify.phar');
+
+addFiles(__DIR__. '/../src', $phar);
+addFiles(__DIR__. '/../vendor', $phar);
+
+$phar->setStub(getStub());
+$phar->stopBuffering();
+
+
+function addFiles($dir, &$phar) {
+    $ignoreDir = realpath(__DIR__. '/..');
+    $dir       = realpath($dir);
+    if (($dh = opendir($dir)) !== false) {
+        while (($file = readdir($dh)) !== false) {
+            if ($file === '.' || $file === '..') {
+                continue;
+            }
+            $full = "$dir/$file";
+            if (is_dir($full)) {
+                addFiles($full, $phar, $ignoreDir);
+            } else {
+                error_log("add '$full' as ($ignoreDir) '". str_replace($ignoreDir, '', $full). '"');
+                $phar->addFromString(str_replace($ignoreDir. '/', '', $full), file_get_contents($full));
+            }
+        }
+        closedir($dh);
+    }
+}
+
+function getStub() {
+    return <<<'EOF'
+#!/usr/bin/env php
+<?php
+
+Phar::mapPhar("pharify.phar");
+
+include_once "phar://pharify.phar/vendor/autoload.php";
+
+$pharify = new Pharify\Console();
+
+try {
+    $pharify->run();
+} catch (InvalidArgumentException $e) {
+    echo "Invalid argument: ". $e->getMessage(). "\n";
+} catch (Exception $e) {
+    echo "Error: ". $e->getMessage(). "\n";
+}
+
+__HALT_COMPILER();
+EOF;
+}
