@@ -17,7 +17,7 @@ function addFiles($dir, &$phar) {
     $dir       = realpath($dir);
     if (($dh = opendir($dir)) !== false) {
         while (($file = readdir($dh)) !== false) {
-            if ($file === '.' || $file === '..') {
+            if ($file === '.' || $file === '..' || $file == '.git' || $file == '.svn' || $file == '.hg') {
                 continue;
             }
             $full = "$dir/$file";

@@ -12,8 +12,12 @@
 
 namespace Pharify\Commands;
 
-use Jet\Console\Command\AbstractCommand,
-    Jet\Console\Command\Argument;
+use Symfony\Component\Console\Command\Command,
+    Symfony\Component\Console\Input\InputArgument,
+    Symfony\Component\Console\Input\InputInterface,
+    Symfony\Component\Console\Input\InputOption,
+    Symfony\Component\Console\Output\OutputInterface;
+
 
 /**
  * Long Description
@@ -21,7 +25,7 @@ use Jet\Console\Command\AbstractCommand,
  * @author Ulrich Kautz <ulrich.kautz@gmail.com>
  */
 
-class CreateCommand extends AbstractCommand
+class CreateCommand extends Command
 {
 
     /**
@@ -38,6 +42,11 @@ class CreateCommand extends AbstractCommand
      * @var string
      */
     protected $outputDir;
+
+    /**
+     * @var string
+     */
+    protected $outputFile;
 
     /**
      * @var string
@@ -63,30 +72,37 @@ class CreateCommand extends AbstractCommand
     /**
      * Init args
      */
-    public function init()
+    public function configure()
     {
         $this
             ->setName('create')
             ->setDescription('Create a new PHAR')
-            ->addArgument('name', Argument::REQUIRED, null, 'Name of the phar output file, eg "foo" creates "foo.phar"')
-            ->addArgument('includes', Argument::OPTIONAL, null, 'Comma separated list of relative paths to files or directories to include. Defaults to current directory.')
-            ->addArgument('directory', Argument::OPTIONAL, null, 'Output folder. Defaults to current dir.')
-            ->addArgument('stub', Argument::OPTIONAL, null, 'Optional stub file. Falls back default stub.');
+            ->addArgument('name', null, InputArgument::REQUIRED, 'Name of the phar output file, eg "foo" creates "foo.phar"')
+            ->addOption('includes', null, InputOption::VALUE_OPTIONAL, 'Comma separated list of relative paths to files or directories to include. Defaults to current directory.')
+            ->addOption('directory', null, InputOption::VALUE_OPTIONAL, 'Output folder. Defaults to current dir.')
+            ->addOption('stub', null, InputOption::VALUE_OPTIONAL, 'Optional stub file. Falls back default stub.');
     }
 
 
     /**
      * @throws \Exception
      */
-    public function execute()
+    public function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->pharName   = $this->getArgument('name');
+        $this->pharName   = $input->getArgument('name');
         $this->pharFile   = $this->pharName. '.phar';
         $this->currentDir = getcwd();
-        $this->outputDir  = $this->hasArgument('directory') ? $this->getArgument('directory') : $this->currentDir;
-        $this->stubFile   = $this->hasArgument('stub') ? $this->getArgument('stub') : null;
-        $this->includes   = $this->hasArgument('includes') ? preg_split('/\s*,\s*/', $this->getArgument('includes')) : [$this->currentDir];
-        $this->phar       = new \Phar($this->outputDir. '/'. $this->pharFile, 0, $this->pharFile);
+        $this->outputDir  = $input->getArgument('directory') ?: $this->currentDir;
+        $this->outputFile = $this->outputDir. '/'. $this->pharFile;
+        $this->stubFile   = $input->hasArgument('stub') ? $input->getArgument('stub') : null;
+        $this->includes   = $input->hasArgument('includes') ? preg_split('/\s*,\s*/', $input->getArgument('includes')) : [$this->currentDir];
+        error_log("DIR: $this->outputDir");
+
+        if (file_exists($this->outputFile)) {
+            unlink($this->outputFile);
+        }
+        $this->phar       = new \Phar($this->outputFile, 0, $this->pharFile);
+
 
         foreach ($this->includes as $path) {
             $absPath = realpath($path);
@@ -103,6 +119,8 @@ class CreateCommand extends AbstractCommand
         }
         $this->phar->stopBuffering();
 
+        chmod($this->outputFile, 0755);
+
     }
 
     /**
@@ -112,15 +130,17 @@ class CreateCommand extends AbstractCommand
      */
     protected function addPharFiles($path)
     {
+        $relPath = substr($path, strlen($this->currentDir)+ 1);
         if (is_file($path)) {
-            $relPath = substr($path, strlen($this->currentDir)+ 1);
             $this->phar->addFromString($relPath, file_get_contents($path));
         } elseif (is_dir($path)) {
             if (($dh = opendir($path)) !== false) {
                 while (($p = readdir($dh)) !== false) {
-                    if ($p === '.' || $p === '..' || "$path/$p" == $this->outputDir. '/'. $this->pharFile) {
+                    if ($p === '.' || $p === '..' || "$path/$p" == $this->outputFile || (is_dir("$path/$p") && in_array($p, array('.git', '.svn',
+                        '.hg')))) {
                         continue;
                     }
+                    error_log(" Add $relPath/$p");
                     $this->addPharFiles("$path/$p");
                 }
                 closedir($dh);
