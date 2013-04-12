@@ -8,7 +8,7 @@ $phar     = new \Phar($pharFile, 0, 'pharify.phar');
 addFiles(__DIR__. '/../src', $phar);
 addFiles(__DIR__. '/../vendor', $phar);
 
-$phar->setStub(getStub());
+$phar->setStub(file_get_contents(__DIR__. '/../stub.php'));
 $phar->stopBuffering();
 
 
@@ -30,27 +30,4 @@ function addFiles($dir, &$phar) {
         }
         closedir($dh);
     }
-}
-
-function getStub() {
-    return <<<'EOF'
-#!/usr/bin/env php
-<?php
-
-Phar::mapPhar("pharify.phar");
-
-include_once "phar://pharify.phar/vendor/autoload.php";
-
-$pharify = new Pharify\Console();
-
-try {
-    $pharify->run();
-} catch (InvalidArgumentException $e) {
-    echo "Invalid argument: ". $e->getMessage(). "\n";
-} catch (Exception $e) {
-    echo "Error: ". $e->getMessage(). "\n";
-}
-
-__HALT_COMPILER();
-EOF;
 }

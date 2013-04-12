@@ -13,9 +13,12 @@
 namespace Pharify;
 
 use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Long Description
@@ -51,7 +54,6 @@ class Console extends Application
             }
             closedir($dh);
         }
-        print_r(['C' => $this->commands]);
     }
 
     /**
@@ -72,6 +74,22 @@ class Console extends Application
             #new InputOption('--no-ansi',        '',   InputOption::VALUE_NONE, 'Disable ANSI output.'),
             new InputOption('--no-interaction', '-n', InputOption::VALUE_NONE, 'Do not ask any interactive question.'),
         ));
+    }
+
+
+    /**
+     * Switch default command to help
+     */
+    public function doRun(InputInterface $input, OutputInterface $output)
+    {
+        $name = $this->getCommandName($input);
+
+        if (!$name) {
+            $name = 'help';
+            $input = new ArrayInput(array('command' => 'help'));
+        }
+
+        return parent::doRun($input, $output);
     }
 
 }
