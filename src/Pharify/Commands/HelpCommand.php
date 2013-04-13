@@ -1,12 +1,7 @@
 <?php
 
 /*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * This file is part of the Pharify package, based on the one from the Symfony package ..
  */
 
 namespace Pharify\Commands;
@@ -21,6 +16,7 @@ use Symfony\Component\Console\Command\HelpCommand as _HelpCommand;
  * HelpCommand displays the help for a given command.
  *
  * @author Fabien Potencier <fabien@symfony.com>
+ * @author Ulrich Kautz <uk@fortrabbit.com>
  */
 class HelpCommand extends _HelpCommand
 {

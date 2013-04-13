@@ -19,6 +19,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Finder\Finder;
 
 /**
  * Long Description
@@ -44,15 +45,10 @@ class Console extends Application
      */
     protected function initCommands()
     {
-        if (($dh = opendir(__DIR__. '/Commands')) !== false) {
-            while (($path = readdir($dh)) !== false) {
-                if ($path === '.' || $path === '..') {
-                    continue;
-                }
-                $commandClass = '\\Pharify\\Commands\\'. preg_replace('/\.php$/', '', $path);
-                $this->add(new $commandClass);
-            }
-            closedir($dh);
+        $finder = new Finder();
+        foreach ($finder->in(__DIR__. '/Commands')->files('/Command\.php$/') as $commandFile) {
+            $commandClass = '\\Pharify\\Commands\\'. preg_replace('#^.+/#', '', preg_replace('/\.php$/', '', $commandFile));
+            $this->add(new $commandClass);
         }
     }
 
