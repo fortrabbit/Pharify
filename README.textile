@@ -1,0 +1,28 @@
+h1. Pharify
+
+Command line tool to create PHP phar packages easily.
+
+h2. Install
+
+Clone, compose, compile, install:
+
+<pre>
+$ git clone https://github.com/fortrabbit/Pharify
+$ cd Pharify
+$ composer install
+$ php bin/compile
+$ sudo cp pharify.phar /usr/local/bin/pharify
+$ sudo chmod +x /usr/local/bin/pharify
+</pre>
+
+h2. Example
+
+Make a phar of Symfony\Console
+
+<pre>
+$ mkdir SymfonyConsole
+$ cd SymfonyConsole
+$ composer require symfony/console 2.2.*
+$ pharify -s vendor/autoload.php -w symfony-console
+$ php -r 'include "phar://symfony-console.phar"; $c = new Symfony\Component\Console\Application(); $c->run();'
+</pre>

@@ -1,33 +1,17 @@
 #!/usr/bin/env php
 <?php
+
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$pharFile = __DIR__ . '/../pharify.phar';
-$phar     = new \Phar($pharFile, 0, 'pharify.phar');
-
-addFiles(__DIR__. '/../src', $phar);
-addFiles(__DIR__. '/../vendor', $phar);
-
-$phar->setStub(file_get_contents(__DIR__. '/../stub.php'));
-$phar->stopBuffering();
-
-
-function addFiles($dir, &$phar) {
-    $ignoreDir = realpath(__DIR__. '/..');
-    $dir       = realpath($dir);
-    if (($dh = opendir($dir)) !== false) {
-        while (($file = readdir($dh)) !== false) {
-            if ($file === '.' || $file === '..' || $file == '.git' || $file == '.svn' || $file == '.hg') {
-                continue;
-            }
-            $full = "$dir/$file";
-            if (is_dir($full)) {
-                addFiles($full, $phar, $ignoreDir);
-            } else {
-                error_log("add '$full' as ($ignoreDir) '". str_replace($ignoreDir, '', $full). '"');
-                $phar->addFromString(str_replace($ignoreDir. '/', '', $full), file_get_contents($full));
-            }
-        }
-        closedir($dh);
-    }
-}
+$rootDir = realpath(__DIR__. '/..');
+$pharify = new Pharify\Console();
+$input   = new Symfony\Component\Console\Input\ArgvInput(array(
+    $_SERVER['argv'][0],
+    'create',
+    '-d', $rootDir,
+    '-p', 'vendor',
+    '-p', 'src',
+    '-s', 'stub.php',
+    'pharify'
+));
+$pharify->run($input);

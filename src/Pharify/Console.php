@@ -35,7 +35,7 @@ class Console extends Application
      */
     public function __construct()
     {
-        parent::__construct();
+        parent::__construct('pharify', self::VERSION);
         $this->initCommands();
     }
 
@@ -90,6 +90,16 @@ class Console extends Application
         }
 
         return parent::doRun($input, $output);
+    }
+
+    /**
+     * Gets the default commands that should always be available.
+     *
+     * @return Command[] An array of default Command instances
+     */
+    protected function getDefaultCommands()
+    {
+        return array();
     }
 
 }

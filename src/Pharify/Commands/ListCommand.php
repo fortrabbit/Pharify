@@ -1,9 +1,9 @@
 <?php
 
 /*
- * This file is part of the Symfony package.
+ * This file is part of the Pharify package.
  *
- * (c) Fabien Potencier <fabien@symfony.com>
+ * (c) Ulrich Kautz <uk@fortrabbit.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -17,11 +17,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Finder\Finder;
 
 /**
- * ListCommand displays the list of all available commands for the application.
+ * ListCommand displays the contents of a phar file
  *
- * @author Fabien Potencier <fabien@symfony.com>
+ * @author Ulrich Kautz <uk@fortrabbit.com>
  */
 class ListCommand extends Command
 {
@@ -32,6 +33,8 @@ class ListCommand extends Command
     {
         $this
             ->setName('list')
+            ->setDescription('List the contents of a PHAR file')
+            ->addArgument('phar-file', InputArgument::REQUIRED, 'Path to the phar file')
         ;
     }
 
@@ -40,13 +43,15 @@ class ListCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function isEnabled()
-    {
-        return true;
+        $pharFile = $input->getArgument('phar-file');
+        $finder = new Finder();
+        $count  = 0;
+        $output->writeln("Listing phar contents:");
+        $strip  = strlen("phar://$pharFile/");
+        foreach ($finder->in("phar://$pharFile")->files() as $file) {
+            $output->writeln(" * ". substr($file, $strip));
+            $count++;
+        }
+        $output->writeln("\nFound $count files in $pharFile");
     }
 }

@@ -33,42 +33,12 @@ class CreateCommand extends Command
     /**
      * @var string
      */
-    protected $pharName;
-
-    /**
-     * @var string
-     */
-    protected $pharFile;
-
-    /**
-     * @var string
-     */
-    protected $outputDir;
-
-    /**
-     * @var string
-     */
-    protected $outputFile;
-
-    /**
-     * @var string
-     */
-    protected $stubFile;
-
-    /**
-     * @var array
-     */
-    protected $paths;
-
-    /**
-     * @var string
-     */
     protected $includes;
 
     /**
      * @var string
      */
-    protected $currentDir;
+    protected $workingDir;
 
     /**
      * @var \Phar
@@ -90,11 +60,12 @@ class CreateCommand extends Command
             ->setName('create')
             ->setDescription('Create a new PHAR')
             ->addArgument('phar-name', InputArgument::REQUIRED, 'Name of the phar output file, eg "foo" creates "foo.phar"')
-            ->addOption('path', 'p', InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL, 'Directory or file to be included. Defaults to current dir.')
+            ->addOption('directory', 'd', InputOption::VALUE_OPTIONAL, 'Working directory for sources. All paths has to be below. Defaults to current dir.')
+            ->addOption('path', 'p', InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL, 'Source directory or file to be included. If none given, all files and directories in working dir are used.')
             ->addOption('includes', 'i', InputOption::VALUE_OPTIONAL, 'Regular expression for including files. Default: '. self::DEFAULT_INCLUDES)
             ->addOption('output', 'o', InputOption::VALUE_OPTIONAL, 'Output folder. Defaults to current dir.')
             ->addOption('stub', 's', InputOption::VALUE_OPTIONAL, 'Optional stub file. Falls back default stub.')
-            ->addOption('wrap-stup', 'w', InputOption::VALUE_NONE, 'If set: wrap the stub file contents in the default stub.');
+            ->addOption('wrap-stub', 'w', InputOption::VALUE_NONE, 'If set: wrap the stub file contents in the default stub. <info>Enable this, if you don\'t know how to write a correct stub!</info>');
     }
 
 
@@ -103,72 +74,102 @@ class CreateCommand extends Command
      */
     public function execute(InputInterface $input, OutputInterface $output)
     {
-
-        // init
-        $this->pharName    = $input->getArgument('phar-name');
-        $this->pharFile    = $this->pharName. '.phar';
-        $this->currentDir  = getcwd();
-        $this->outputDir   = $input->getOption('output') ?: $this->currentDir;
-        $this->outputFile  = $this->outputDir. '/'. $this->pharFile;
-        $this->stubFile    = $input->getOption('stub') ?: null;
-        $this->paths       = $input->getOption('path') ? (array)$input->getOption('path') : array($this->currentDir);
+        if (ini_get('phar.readonly')) {
+            throw new \Exception("Phar creation is disabled. Set 'phar.readonly' to 0 in php.ini");
+        }
+        
+        // init class vars
+        $this->workingDir  = realpath($input->getOption('directory') ?: getcwd());
         $this->includes    = $input->getOption('includes') ?: self::DEFAULT_INCLUDES;
-        $this->verbose     = $input->getOption('verbose');
+        $this->verbose     = OutputInterface::VERBOSITY_VERBOSE === $output->getVerbosity();
         $this->output      = &$output;
 
+        // init local vars
+        $pharName    = $input->getArgument('phar-name');
+        $pharFile    = $pharName. '.phar';
+        $outputDir   = $input->getOption('output') ?: $this->workingDir;
+        $outputFile  = $outputDir. '/'. $pharFile;
+        $stubFile    = $input->getOption('stub') ?: null;
+        $paths       = $input->getOption('path') ? (array)$input->getOption('path') : array($this->workingDir);
+
         // cleanup old
-        if (file_exists($this->outputFile)) {
-            unlink($this->outputFile);
+        if (file_exists($outputFile)) {
+            unlink($outputFile);
         }
+        
+        $this->output->writeln("Creating $outputFile");
 
         // setup phar
-        $this->phar = new \Phar($this->outputFile, 0, $this->pharFile);
-
+        $this->phar = new \Phar($outputFile, 0, $pharFile);
 
         // iterate paths
-        foreach ($this->paths as $path) {
-            $absPath = realpath($path);
-            if (strpos($absPath, $this->currentDir) !== 0) {
-                throw new \Exception("Could not find '$path' in current directory");
+        foreach ($paths as $path) {
+            $absPath = $path;
+            if (strpos($absPath, '/') !== 0) {
+                $absPath = $this->workingDir. '/'. $path;
+            }
+            $absPath = realpath($absPath);
+            if (strpos($absPath, $this->workingDir) !== 0) {
+                throw new \Exception("Could not find '$path' in '$this->workingDir'");
             }
             $this->addPharFiles($absPath);
         }
 
-        if (!is_null($this->stubFile)) {
-            error_log("USING STUB FILE");
-            if ($input->getOption('wrap-stup')) {
-                $this->phar->setStub($this->phar->createDefaultStub($this->stubFile));
+        if (!is_null($stubFile)) {
+            $stubContents = file_get_contents($stubFile);
+            $doWrap       = $input->getOption('wrap-stub');
+            if (!$doWrap && !preg_match('/__HALT_COMPILER/', $stubContents)) {
+                throw new \Exception("Stub file does not look like a correct formatted stub file. Use the --wrap-stub option");
+            }
+            if ($doWrap) {
+                if ($this->verbose) {
+                    $this->output->writeln("Using wrapped stub file $stubFile");
+                }
+                $this->phar->setStub($this->phar->createDefaultStub($stubFile));
             } else {
-                $this->phar->setStub(file_get_contents($this->stubFile));
+                if ($this->verbose) {
+                    $this->output->writeln("Using stub file $stubFile");
+                }
+                $this->phar->setStub($stubContents);
             }
         } else {
-            $this->phar->setStub("#!/usr/bin/env php\n<?php\nPhar::mapPhar('". $this->pharFile. "');\n__HALT_COMPILER();");
+            if ($this->verbose) {
+                $this->output->writeln("Using default stub");
+            }
+            $this->phar->setStub("#!/usr/bin/env php\n<?php\nPhar::mapPhar('". $pharFile. "');\n__HALT_COMPILER();");
         }
         $this->phar->stopBuffering();
 
-        chmod($this->outputFile, 0755);
+        chmod($outputFile, 0755);
+        
+        $this->output->writeln("Done");
     }
 
     /**
-     * The long description
+     * Adds directories and files to phar
      *
-     * @param string  $dir   Directory to look in
+     * @param string  $path   Directory or file to add
      */
     protected function addPharFiles($path)
     {
+        $stripLength = strlen($this->workingDir)+ 1;
         if (is_file($path)) {
-            $relPath = substr($path, strlen($this->currentDir)+ 1);
+            $relPath = substr($path, $stripLength);
             if (preg_match('/'. $this->includes. '/', $path)) {
-                #error_log("ADD $path as $relPath");
+                if ($this->verbose) {
+                    $this->output->writeln("<info>+ Add: $relPath</info>");
+                }
                 $this->phar->addFile($path, $relPath);
             } elseif ($this->verbose) {
-                error_log("Ignore: $path");
+                $this->output->writeln("<info>- Ignore: $realpath</info>");
             }
         } elseif (is_dir($path)) {
             $finder = new Finder();
             foreach ($finder->in($path)->files()->name('/'. $this->includes. '/') as $p) {
-                $relPath = substr($p, strlen($this->currentDir)+ 1);
-                #error_log("ADD FINDER $p as $relPath");
+                $relPath = substr($p, $stripLength);
+                if ($this->verbose) {
+                    $this->output->writeln("<info>+ Add: $relPath</info>");
+                }
                 $this->phar->addFile($p, $relPath);
             }
         }
