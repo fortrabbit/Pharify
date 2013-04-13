@@ -23,6 +23,6 @@ Make a phar of Symfony\Console
 $ mkdir SymfonyConsole
 $ cd SymfonyConsole
 $ composer require symfony/console 2.2.*
-$ pharify -s vendor/autoload.php -w symfony-console
+$ pharify create -s vendor/autoload.php -w symfony-console
 $ php -r 'include "phar://symfony-console.phar"; $c = new Symfony\Component\Console\Application(); $c->run();'
 </pre>
