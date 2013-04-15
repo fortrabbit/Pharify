@@ -18,7 +18,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Pharify\Tools\Creator;
-use Pimple;
 
 
 /**
@@ -80,10 +79,10 @@ class CreateCommand extends Command
         }
 
         // init creator
-        $container = new Pimple();
-        $container['output'] = $output;
-        $creator = new Creator($container);
-        //$creator = new Creator();
+        $creator = new Creator();
+
+        // set output
+        $creator->setOutput($output);
 
         // set working dir
         $creator->setWorkingDir($input->getOption('directory') ?: getcwd());

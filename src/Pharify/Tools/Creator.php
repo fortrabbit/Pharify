@@ -12,7 +12,6 @@
 
 namespace Pharify\Tools;
 
-use Pimple;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Finder\Finder;
 
@@ -27,9 +26,9 @@ class Creator
     const DEFAULT_INCLUDES = '\.(?:php)$';
 
     /**
-     * @var \Pimple
+     * @var \Symfony\Component\Console\Output\OutputInterface
      */
-    protected $container;
+    protected $output;
 
     /**
      * @var \Phar
@@ -71,12 +70,8 @@ class Creator
      *
      * @throws \Exception
      */
-    public function __construct(\Pimple $container = null)
+    public function __construct()
     {
-        if (is_null($container)) {
-            $container = new \Pimple();
-        }
-        $this->container    = $container;
         $this->includePaths = array();
         $this->includeRegex = self::DEFAULT_INCLUDES;
         $this->stubWrap     = true;
@@ -128,6 +123,17 @@ class Creator
         $this->includePaths[] = $absPath;
     }
 
+    /**
+     * Set output interface
+     *
+     * @param Symfony\Component\Console\Output\OutputInterface  $output  The output interface
+     */
+    public function setOutput(OutputInterface $output)
+    {
+        $this->output = $output;
+    }
+
+
 
     /**
      * Output message
@@ -136,8 +142,8 @@ class Creator
      */
     public function output($msg, $verbose = false)
     {
-        if (isset($this->container['output']) && (!$verbose || OutputInterface::VERBOSITY_VERBOSE === $this->container['output']->getVerbosity())) {
-            $this->container['output']->writeln($msg);
+        if (!is_null($this->output) && (!$verbose || OutputInterface::VERBOSITY_VERBOSE === $this->output->getVerbosity())) {
+            $this->output->writeln($msg);
         }
     }
 
