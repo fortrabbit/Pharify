@@ -27,7 +27,7 @@ use Pimple;
  * @author Ulrich Kautz <ulrich.kautz@gmail.com>
  */
 
-class Create2Command extends Command
+class CreateCommand extends Command
 {
     const DEFAULT_INCLUDES = '\.(?:php)$';
 
@@ -66,7 +66,7 @@ class Create2Command extends Command
             ->addOption('includes', 'i', InputOption::VALUE_OPTIONAL, 'Regular expression for including files. Default: '. self::DEFAULT_INCLUDES)
             ->addOption('output', 'o', InputOption::VALUE_OPTIONAL, 'Output folder. Defaults to current dir.')
             ->addOption('stub', 's', InputOption::VALUE_OPTIONAL, 'Optional stub file. Falls back default stub.')
-            ->addOption('wrap-stub', 'w', InputOption::VALUE_NONE, 'If set: wrap the stub file contents in the default stub. <info>Enable this, if you don\'t know how to write a correct stub!</info>');
+            ->addOption('no-stub-wrap', 'w', InputOption::VALUE_NONE, 'Disable wrapping stub file in default stub. You know what you are doing?');
     }
 
 
@@ -95,7 +95,7 @@ class Create2Command extends Command
 
         // set stub file
         if ($stubFile = $input->getOption('stub')) {
-            $creator->setStubFile($stubFile, $input->getOption('wrap-stub'));
+            $creator->setStubFile($stubFile, $input->getOption('no-stub-wrap') ? false : true);
         }
 
         // add paths
