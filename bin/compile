@@ -12,6 +12,7 @@ $input   = new Symfony\Component\Console\Input\ArgvInput(array(
     '-p', 'vendor',
     '-p', 'src',
     '-s', 'stub.php',
+    '-w',
     'pharify'
 ));
 $pharify->run($input);
