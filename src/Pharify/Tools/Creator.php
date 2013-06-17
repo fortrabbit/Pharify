@@ -172,7 +172,7 @@ class Creator
      */
     public function setCompression($compression)
     {
-        if (!in_array($com, [\Phar::GZ, \Phar::BZ2, \Phar::NONE])) {
+        if (!in_array($compression, [\Phar::GZ, \Phar::BZ2, \Phar::NONE])) {
             throw new \InvalidArgumentException("Compression method not supported. Use one of \\Phar::GZ, \\Phar::BZ or \\Phar::NONE");
         }
         $this->compression = $compression;
@@ -231,7 +231,7 @@ class Creator
         foreach ($this->includePaths as $path) {
             if (is_file($path)) {
                 $relPath = substr($path, $stripLength);
-                if (preg_match('/'. $this->includes. '/', $path)) {
+                if (preg_match('/'. $this->includeRegex. '/', $path)) {
                     $this->output("<info>+ Add: $relPath</info>", true);
                     //$phar->addFile($path, $relPath);
                     $fileList []= [$path, $relPath];
@@ -286,7 +286,7 @@ class Creator
 
         // set compression?
         if ($this->compression && $this->compression !== \Phar::NONE) {
-            $phar->compression($this->compression);
+            $phar->compressFiles($this->compression);
         }
 
         // stop everything
