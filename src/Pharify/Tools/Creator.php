@@ -60,6 +60,16 @@ class Creator
      */
     protected $stubWrap;
 
+    /**
+     * @var \Closure
+     */
+    protected $progressInitCallback;
+
+    /**
+     * @var \Closure
+     */
+    protected $progressAdvanceCallback;
+
 
     /**
      * Constructor for Pharify\Tools\Creator
@@ -76,6 +86,18 @@ class Creator
         $this->includeRegex = self::DEFAULT_INCLUDES;
         $this->stubWrap     = true;
     }
+
+    /**
+     * Set callback for progress
+     *
+     * @param mixed $callback The callback or null
+     */
+    public function setProgressCallbacks($initCallback, $advanceCallback)
+    {
+        $this->progressInitCallback    = $initCallback;
+        $this->progressAdvanceCallback = $advanceCallback;
+    }
+
 
     /**
      * Set work directory
@@ -179,12 +201,16 @@ class Creator
         if (empty($this->includePaths)) {
             $this->includePaths = array($this->workingDir);
         }
+
+        // determine files
+        $fileList = array();
         foreach ($this->includePaths as $path) {
             if (is_file($path)) {
                 $relPath = substr($path, $stripLength);
                 if (preg_match('/'. $this->includes. '/', $path)) {
                     $this->output("<info>+ Add: $relPath</info>", true);
-                    $phar->addFile($path, $relPath);
+                    //$phar->addFile($path, $relPath);
+                    $fileList []= [$path, $relPath];
                 } else {
                     $this->output("<info>- Ignore: $relPath</info>", true);
                 }
@@ -193,9 +219,27 @@ class Creator
                 foreach ($finder->in($path)->files()->name('/'. $this->includeRegex. '/') as $p) {
                     $relPath = substr($p, $stripLength);
                     $this->output("<info>+ Add: $relPath</info>", true);
-                    $phar->addFile($p, $relPath);
+                    //$phar->addFile($p, $relPath);
+                    $fileList []= [$p, $relPath];
                 }
             }
+        }
+
+        // add to phar
+        $countFiles = count($fileList);
+        $progress   = 0;
+        if ($initCallback = $this->progressInitCallback) {
+            $initCallback($countFiles);
+        }
+        $advanceCallback = $this->progressAdvanceCallback;
+        foreach ($fileList as $num => $ref) {
+            list($path, $relPath) = $ref;
+            $percent = floor($num * 100/$countFiles);
+            if ($advanceCallback) {
+                $progress = $percent;
+                $advanceCallback($percent);
+            }
+            $phar->addFile($path, $relPath);
         }
 
         // add stub file

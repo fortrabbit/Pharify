@@ -81,6 +81,17 @@ class CreateCommand extends Command
         // init creator
         $creator = new Creator();
 
+        // generate & attach progress bar
+        $progress = $this->getHelperSet()->get('progress');
+        $creator->setProgressCallbacks(
+            function ($amount) use (&$progress, &$output) {
+                $progress->start($output, $amount);
+            },
+            function ($percent) use (&$progress) {
+                $progress->advance();
+            }
+        );
+
         // set output
         $creator->setOutput($output);
 
