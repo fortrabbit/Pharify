@@ -70,6 +70,11 @@ class Creator
      */
     protected $progressAdvanceCallback;
 
+    /**
+     * @var int
+     */
+    protected $compression;
+
 
     /**
      * Constructor for Pharify\Tools\Creator
@@ -155,6 +160,24 @@ class Creator
         $this->output = $output;
     }
 
+    /**
+     * The long description
+     *
+     * @param Some\Class   $arg1  What it contains
+     * @param string       $arg2  What it contains
+     *
+     * @return bool
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function setCompression($compression)
+    {
+        if (!in_array($com, [\Phar::GZ, \Phar::BZ2, \Phar::NONE])) {
+            throw new \InvalidArgumentException("Compression method not supported. Use one of \\Phar::GZ, \\Phar::BZ or \\Phar::NONE");
+        }
+        $this->compression = $compression;
+    }
+
 
 
     /**
@@ -195,6 +218,7 @@ class Creator
 
         // init phar
         $phar = new \Phar($pharPath, 0, $pharFile);
+        $phar->startBuffering();
 
         // add paths to phar
         $stripLength = strlen($this->workingDir)+ 1;
@@ -258,6 +282,11 @@ class Creator
         } else {
             $this->output("Using default stub", true);
             $phar->setStub("#!/usr/bin/env php\n<?php\nPhar::mapPhar('". $pharFile. "');\n__HALT_COMPILER();");
+        }
+
+        // set compression?
+        if ($this->compression && $this->compression !== \Phar::NONE) {
+            $phar->compression($this->compression);
         }
 
         // stop everything

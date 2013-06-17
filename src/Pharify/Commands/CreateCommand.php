@@ -65,6 +65,7 @@ class CreateCommand extends Command
             ->addOption('includes', 'i', InputOption::VALUE_OPTIONAL, 'Regular expression for including files. Default: '. self::DEFAULT_INCLUDES)
             ->addOption('output', 'o', InputOption::VALUE_OPTIONAL, 'Output folder. Defaults to current dir.')
             ->addOption('stub', 's', InputOption::VALUE_OPTIONAL, 'Optional stub file. Falls back default stub.')
+            ->addOption('compression', 'c', InputOption::VALUE_OPTIONAL, 'Set compressio to either "gz" or "bz" (default: none).')
             ->addOption('no-stub-wrap', 'w', InputOption::VALUE_NONE, 'Disable wrapping stub file in default stub. You know what you are doing?');
     }
 
@@ -113,6 +114,21 @@ class CreateCommand extends Command
             foreach ((array)$paths as $path) {
                 $creator->addIncludePath($path);
             }
+        }
+
+        // compression?
+        if ($compression = $input->getOption('compression')) {
+            switch ($compression) {
+                case 'gz':
+                    $compression = \Phar::GZ;
+                    break;
+                case 'bz':
+                    $compression = \Phar::BZ2;
+                    break;
+                default:
+                    throw new \InvalidArgumentException("Cannot use compression '$compression'. Use one of \"gz\" or \"bz\" or omit (no compression)");
+            }
+            $creator->setCompression($compression);
         }
 
         // create the phar
