@@ -10,7 +10,6 @@ $pharify = new Pharify\Console();
 
 if (file_exists(".pharify")) {
     $newArgv = $argv;
-    array_shift($newArgv);
     $newArgv = array_merge($newArgv, preg_split('/\s+/', file_get_contents(".pharify")));
     $input = new Symfony\Component\Console\Input\ArgvInput($newArgv);
     $pharify->run($input);
